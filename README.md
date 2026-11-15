@@ -40,7 +40,7 @@ Set these as environment variables. Never put real keys in the frontend files.
 |---|---|
 | `SECRET_KEY` | Signs login sessions. **Required in production**, use a long random value. |
 | `PAYSTACK_SECRET_KEY` | Paystack secret key (`sk_test_...` while testing, `sk_live_...` when live). Online payment is hidden until this is set. |
-| `PUBLIC_BASE_URL` | The public address of the site, e.g. `https://shop.example.com`. Used for Paystack callbacks. |
+| `PUBLIC_BASE_URL` | The public address of the site, e.g. `https://shop.example.com`. Used for Paystack callbacks. Not needed on Render (uses `RENDER_EXTERNAL_URL`). |
 | `DATABASE_PATH` | Optional. SQLite file location. Defaults to `instance/marketplace.db`. |
 | `SESSION_COOKIE_SECURE` | Set to `1` once the site runs on HTTPS. |
 
@@ -88,7 +88,31 @@ Key workflows:
 - **Delivery:** assign a rider, track progress. Delivery updates move the order status automatically, and the reverse also applies.
 - **Reports:** revenue, average order, online versus cash split, daily sales, top products.
 
-## 7. Deploying
+## 7. Deploying on Render
+
+The project includes `render.yaml`, which Render reads to create the service and its disk.
+
+1. Push the project to a GitHub repository (the zip contents, with the folder as the repo root).
+2. In Render, choose **New → Blueprint** and select the repository.
+3. When prompted, enter `PAYSTACK_SECRET_KEY` (use `sk_test_...` first). `SECRET_KEY` is generated automatically.
+4. Click **Apply**. Render builds the app and starts it with gunicorn.
+5. Create your admin account from the service's **Shell** tab:
+
+   ```bash
+   flask --app backend.app create-admin
+   ```
+
+   Shell access depends on your Render plan, so check Render's current documentation if the tab is missing.
+6. In the Paystack dashboard, set the webhook URL to `https://YOUR-SERVICE.onrender.com/api/paystack/webhook`.
+
+Notes for Render:
+
+- **Data persistence:** the database is stored on a persistent disk at `/var/data`. Without a disk (for example on the free plan), all orders and products are lost on every restart or redeploy. The disk requires a paid plan.
+- **Single instance:** SQLite works best with one instance, so `render.yaml` runs one gunicorn worker with several threads and does not scale horizontally. Moving to Render's managed PostgreSQL would be needed to run multiple instances.
+- **Public URL:** Render provides `RENDER_EXTERNAL_URL` automatically, and the app uses it for Paystack callbacks.
+- **Free-plan sleep:** free web services spin down when idle, which slows the first request. It is one reason to use a paid plan for a live store.
+
+## 7b. Deploying on another host
 
 1. Use a Linux server with HTTPS (for example through Nginx and Let's Encrypt).
 2. Install the app, then run it with a production server:
@@ -96,7 +120,7 @@ Key workflows:
    ```bash
    export SECRET_KEY='replace-with-a-long-random-string'
    export PAYSTACK_SECRET_KEY='sk_live_...'
-   export PUBLIC_BASE_URL='https://shop.example.com'
+   export PUBLIC_BASE_URL='https://shop.example.com'   # optional on Render, which sets RENDER_EXTERNAL_URL
    export SESSION_COOKIE_SECURE=1
    gunicorn --workers 3 --bind 127.0.0.1:8000 "backend.app:create_app()"
    ```

@@ -1191,7 +1191,7 @@ def create_app(test_config=None):
         SECRET_KEY=os.environ.get("SECRET_KEY") or secrets.token_hex(32),
         DATABASE=os.environ.get("DATABASE_PATH", os.path.join(BASE_DIR, "instance", "marketplace.db")),
         PAYSTACK_SECRET_KEY=os.environ.get("PAYSTACK_SECRET_KEY", ""),
-        PUBLIC_BASE_URL=os.environ.get("PUBLIC_BASE_URL", ""),
+        PUBLIC_BASE_URL=os.environ.get("PUBLIC_BASE_URL") or os.environ.get("RENDER_EXTERNAL_URL", ""),  # Render sets RENDER_EXTERNAL_URL
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "0") == "1",
